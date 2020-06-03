@@ -25,7 +25,7 @@ CC = gcc
 COBJS = main.o helpers.o blendImage.o \
 	readwriteImage.o  \
 	subsampleImage.o 
-ASMOBJS = negateImage.o grayscaleImage.o contrastImage.o
+ASMOBJS = negateImage.o grayscaleImage.o contrastImage.o brightenImage.o sharpenImage.o smoothImage.o
 INCLUDES = -I.
 LIBDIRS = 
 LIBS = 
