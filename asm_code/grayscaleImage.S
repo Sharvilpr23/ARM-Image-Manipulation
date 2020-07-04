@@ -110,7 +110,7 @@ colorImage:
 	/* Allocate memory for grayscale image */
 	mov	r5, r0
 	mov	r6, r1	
-	bl	allocate_pixel_array	
+	bl	allocate_grayscale	
 
 	str	r0, [r4, #24]	@ Store grayscale image
 	mov	r3, r0	

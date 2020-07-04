@@ -23,9 +23,9 @@ LAST_NAME=CSC314
 CC = gcc
 
 COBJS = main.o helpers.o blendImage.o \
-	readwriteImage.o  \
-	subsampleImage.o 
-ASMOBJS = negateImage.o grayscaleImage.o contrastImage.o brightenImage.o sharpenImage.o smoothImage.o
+	readwriteImage.o \
+	subsampleImage.o
+ASMOBJS = negateImage.o brightenImage.o grayscaleImage.o contrastImage.o smoothImage.o sharpenImage.o memory.o
 INCLUDES = -I.
 LIBDIRS = 
 LIBS = 

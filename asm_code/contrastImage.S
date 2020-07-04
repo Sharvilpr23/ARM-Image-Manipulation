@@ -1,115 +1,92 @@
-		.data
-msg:		.asciz "contrastImage has not been implemented\n"
-		.align 2
+	.data
+msg:	.asciz "contrastImage has not been implemented\n"
 	
-		.text
-		.global 
-contrastImage:
-		stmfd	sp!, {r4-r10,lr}
-		vstmdb	sp!, {d8}
+	.text
+	.globl contrast_pixel
+contrast_pixel:
+	stmfd		sp!,{lr}
 
-		mov	r4, r0			@ Pointer to image
-		mov	r5, r1			@ rows	
-		mov	r6, r2			@ cols
-    
-	    	ldrb	r2, [r3]	    	@ Load minimum
-		ldrb	r7, [r3, #1]		@ Load maximum
+	sub		r0,r0,r1	@ pixelValue - minimum
+	vmov		s1,r0
+	vcvt.f32.u32	s1,s1
+	vmul.f32	s0,s1,s0	@ scale x (pixelValue - minimum)
 
-		cmp	 r7, r2		    	@ maximum = minimum?
-		moveq	 r0, #1
-		vmoveq.f32 s0, r0
-		beq	 skipScale
+	mov		r2,#1
+	mov		r3,#2
+	vmov		s2,r2
+	vmov		s3,r3
+	vcvt.f32.u32	s2,s2
+	vcvt.f32.u32	s3,s3
+	vdiv.f32	s2,s2,s3	@ 0.5
+	vadd.f32	s0,s0,s2	@ scale x (pixelValue - minimum) + 0.5
+	vcvt.u32.f32	s0,s0
+	vmov		r0,s0
+	bl		crop
 
-		sub		r1, r2, r7	@ maximum - minimum
-		vmov.f32	s1, r1
-		mov		r3, #256
-		sub		r3, r3, #1
-		vmov.f32	s0, r3
-		vdiv.f32	s16, s0, s1
-		vmov.f32	s17, r7		@ minimum
+	ldmfd		sp!,{lr}
+	mov		pc,lr
 
-skipScale:
-		mov		r8, #0		@ i = 0
-		
-loopi:		
-		cmp	r8, r5			@ i >= rows?
-		bge	exiti
+	.globl scale
+scale:
+	mov		r2,#255
+	vmov		s1,r2
+	vcvt.f32.u32 	s1,s1
+	sub		r0,r1,r0	@ maximum - minimum
+	vmov		s0,r0
+	vcvt.f32.u32 	s0,s0
+	vdiv.f32	s0,s1,s0	@ 255 / (maximum - minimum)
+	mov		pc,lr
 
-		ldr	r10, [r4, r8, lsl #2]	@ Get right column
-		mov	r9, #0			@ j = 0
+	.globl contrastImage
+contrastImage:	
+	stmfd	sp!,{r4-r11,lr}
+	vpush	{d8}
 
-loopj:	    	
-		cmp	r9, r6			@ j >= cols?
-		bge	exitj
+	mov	r8,r0		@ pointer to netImage
+	bl	grayscaleImage
 
-		ldrb	    r0, [r10, r9]	@ Load grayscale value
+	mov		r11,r0		@ minimum
 
-calculation:		
-		vmov.f32    s0, r0
-		vsub.f32    s0, s0, s17		@ pixelValue - minimum
-		vmul.f32    s0, s0, s16		@ scale x ( pixelValue - minimum)
-		
-		/* Get 0.5 */
-		mov	    r0, #1
-		vmov.f32    s1, r0
-		mov	    r0, #2
-		vmov.f32    s2, r0
-		vdiv.f32    s1, s1, s2
-	    
-		vadd.f32    s0, s0, s2		@ scale x ( pixelValue - minimum ) + 0.5
-		vmov.u32    r0, s0
-		bl	    crop
-
-		strb	    r0, [r10, r9]	@ Store the value back
-		add	    r9, r9, #1		@ j++
-		b	    loopj
-
-exitj:
-		add	    r8, r8, #1 		@ i++
-		b	    loopi
-
-exiti:	
-		mov	    r8, #0
-
-		vldmia	sp!, {d8}
-		ldmfd	sp!, {r4-r10,lr} 
-		mov	pc, lr	
-
-		.global	contrastImage
-contrastImage: 
-	stmfd	sp!,{r4-r6,lr}
+	cmp		r0,r1		@ minimum = maximum?
+	/* If True */
+	moveq		r2,#1		@ scaling factor = 1
+	vmoveq		s16,r2
+	vcvteq.f32.u32  s16,s16
+	/* If False */
+	blne		scale
+	vmovne.f32	s16,s0
 	
-	mov	r4, r0		@ Pointer to image
-	ldrb	r0, [r4]	@ Load image in r0
+	ldr	r4,[r8,#12]	@ rows
+	ldr	r5,[r8,#16]	@ cols
+	ldr	r6,[r8,#24]	@ pointer to image
+
+	mov	r9, #0		@ i = 0
+
+loopi:	
+	cmp	r9, r4			@ i >= rows?
+	bge	return
 	
-	cmp	r0, #0x32	@ Magic number = 2?
-	beq	return
-	cmp	r0, #0x34	@ Magic number = 4?
-	beq	return
+	ldr	r7,[r6, r9, lsl #2]	@ Load rows[i]
+	mov	r10,#0			@ j = 0
 
-	cmp	r0, #0x33	@ Magic number = 3?
-	beq	colorImage
-	cmp	r0, #0x36	@ Magic number = 6?
-	beq	colorImage
+loopj:  
+	cmp	r10, r5		@ j >= cols?
+	addge	r9,r9,#1	@ i++
+	bge	loopi
 
-	b	errmsg
-	
-colorImage:
-	mov	r0, r4
-	bl	grayscaleImage	    @ Grayscale the image
- 
-	mov	r3, r0
-	ldr	r0, [r4,#24]	    @ Pointer to grayscale image
-	ldr	r1, [r4,#12]	    @ rows
-	ldr	r2, [r4,#16]	    @ cols
+	ldrb	r0,[r7,r10]	@ Load a byte of memory 
+	mov	r1,r11		@ Load minimum
+	vmov.f32 s0,s16		@ Load scaling factor
+	bl	contrast_pixel
 
-	bl	imageOperation		
-	b	return	
+	strb	r0,[r7,r10]
+	add	r10,r10,#1	@ j++
+	b	loopj
 
-errmsg:		
-	ldr	r0,=msg
-	bl	printf
-	
-return:
-	ldmfd	sp!,{r4-r6, lr}
+return:	
+	vpop	{d8}
+	ldmfd	sp!,{r4-r11,lr}
 	mov	pc,lr
+	
+
+	

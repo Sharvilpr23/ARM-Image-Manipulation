@@ -1,81 +1,27 @@
 #include <stdlib.h>
 #include <netImage.h>
 
-rgbpixel ** fixSharpenBorders(rgbpixel **pix, int rows, int cols)
+rgbpixel ** fix_borders(rgbpixel **temp, int rows, int cols)
 {
-    for( int i = 1; i < rows - 1; ++i )
-    {
-      pix[i][0] = pix[i][1];
-      pix[i][cols-1] = pix[i][cols-2];
+	for(int i  = 1; i < rows - 1; ++i)
+	{
+		temp[i][0] = temp[i][1];
+		temp[i][cols - 1] = temp[i][cols - 2];
 
-      if ( i < cols - 1 )
-      {
-        pix[0][i] = pix[1][i];
-        pix[rows-1][i] = pix[rows-2][i];
-      }
-    } 
-    
-  pix[0][0] = pix[1][1];
-  pix[0][cols-1] = pix[1][cols-2];
-  pix[rows-1][0] = pix[rows-2][1];
-  pix[rows-1][cols-1] = pix[rows-2][cols-2];
+		if(i < cols - 1)
+		{
+			temp[0][i] = temp[1][i];
+			temp[rows - 1][i] = temp[rows - 2][i];
+		}
+	}
+	temp[0][0] = temp[1][1];
+	temp[0][cols - 1] = temp[1][cols - 2];
+	temp[rows - 1][0] = temp[rows - 2][1];
+	temp[rows - 1][cols - 1] = temp[rows - 2][cols - 2];
 
-  return pix;
+	return temp;
 }
 
-unsigned char **allocate_pixel_array(int rows, int cols)
-{
-  unsigned char **array;
-  int i;
-  if((array = malloc(sizeof(unsigned char *)*rows))==NULL)
-    {
-      fprintf(stderr,"Unable to allocate space for input image\n");
-      exit(1);
-    }
-  for(i=0;i<rows;i++)
-    if((array[i] = malloc(sizeof(unsigned char)*cols))==NULL)
-      {
-fprintf(stderr,"Unable to allocate space for input image\n");
-exit(1);
-      }
-  return array;
-}
-
-rgbpixel **allocate_struct_array(int rows, int cols)
-{
-    rgbpixel **array;
-    int i;
-   
-    if((array = malloc(sizeof(rgbpixel *)* rows )) == NULL )  
-    {
-      fprintf(stderr,"Unable to allocate space for input image\n");
-      exit(1);
-
-    }
-
-    for ( i = 0; i < rows; ++i )
-    {
-
-if( (array[i] = malloc(sizeof(rgbpixel )* cols )) == NULL )  
-{
-   fprintf(stderr,"Unable to allocate space for input image\n");
-   exit(1);
-
-}
-    }
-
-    return array;
-}
-
-void free_array( char unsigned **image, int rows )
-{
-    for ( int i = 0; i < rows; ++i )
-    {
-free(image[i]);
-    }
-   
-    free(image);
-}
 
 op_list * add_op(op_list* list,op_t operation, char *argument)
 {
